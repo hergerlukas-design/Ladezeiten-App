@@ -1,0 +1,8 @@
+{
+  "name": "E-Auto Ladezeit Rechner",
+  "short_name": "Ladezeit",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#3f3f3f",
+  "theme_color": "#3f3f3f"
+}

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PWA Einstellungen -->
+<meta name="theme-color" content="#3f3f3f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="manifest" href="manifest.json">
+
+<title>Ladezeit Rechner</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:rgb(63,63,63);
+    color:white;
+    padding:20px;
+}
+
+.container{
+    max-width:420px;
+    margin:auto;
+}
+
+h2{
+    text-align:center;
+}
+
+input,button{
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+    border-radius:6px;
+    border:none;
+    font-size:14px;
+}
+
+input{
+    background:#555;
+    color:white;
+}
+
+button{
+    background:rgb(198,0,17);
+    color:white;
+    font-weight:bold;
+}
+
+#result{
+    text-align:center;
+    margin-top:10px;
+    font-size:18px;
+}
+
+canvas{
+    margin-top:20px;
+    background:#444;
+    border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>Ladezeit Rechner</h2>
+
+<input type="number" id="capacity" placeholder="Batterie (kWh)">
+<input type="number" id="power" placeholder="Ladeleistung (kW)">
+<input type="number" id="current" placeholder="Aktuell (%)">
+<input type="number" id="target" placeholder="Ziel (%)">
+
+<label>
+<input type="checkbox" id="cold"> Kalte Batterie berücksichtigen
+</label>
+
+<button onclick="calc()">Berechnen</button>
+
+<div id="result"></div>
+
+<canvas id="chart"></canvas>
+</div>
+
+<script>
+// Service Worker registrieren
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+}
+
+let chart;
+
+function calc(){
+    let capacity=parseFloat(capacityInput.value);
+    let power=parseFloat(powerInput.value);
+    let current=parseFloat(currentInput.value);
+    let target=parseFloat(targetInput.value);
+    let cold=coldCheck.checked;
+
+    if(!capacity||!power||target<=current){
+        result.innerText="Ungültige Eingabe";
+        return;
+    }
+
+    let soc=current;
+    let time=0;
+    let labels=[];
+    let powers=[];
+
+    while(soc<target){
+        let factor=1;
+
+        if(soc>=80 && soc<90) factor=0.7;
+        if(soc>=90) factor=0.4;
+
+        if(cold && time<(10/60)) factor*=0.6;
+
+        labels.push(Math.round(soc));
+        powers.push(power*factor);
+
+        let energy=capacity*(1/100);
+        time+=energy/(power*factor);
+        soc+=1;
+    }
+
+    let h=Math.floor(time);
+    let m=Math.round((time-h)*60);
+    m=m.toString().padStart(2,'0');
+
+    result.innerText=`Ladezeit: ${h}:${m} h`;
+
+    if(chart) chart.destroy();
+
+    chart=new Chart(document.getElementById('chart'),{
+        type:'line',
+        data:{
+            labels:labels,
+            datasets:[{
+                label:'Ladeleistung (kW)',
+                data:powers,
+                borderColor:'#ff4d4d',
+                backgroundColor:'rgba(255,77,77,0.2)',
+                tension:0.3
+            }]
+        },
+        options:{
+            plugins:{legend:{labels:{color:'white'}}},
+            scales:{
+                x:{ticks:{color:'white'}},
+                y:{ticks:{color:'white'}}
+            }
+        }
+    });
+}
+
+const capacityInput=document.getElementById("capacity");
+const powerInput=document.getElementById("power");
+const currentInput=document.getElementById("current");
+const targetInput=document.getElementById("target");
+const coldCheck=document.getElementById("cold");
+const result=document.getElementById("result");
+</script>
+
+</body>
+</html>
